@@ -66,20 +66,7 @@ Ya manually:
 - `chrome-extension` folder ko ZIP karo
 - `.git`, `README.md` exclude karo
 
-### Step 3: Chrome Web Store Developer Account
 
-1. **Chrome Web Store Developer Account Banao:**
-   - https://chrome.google.com/webstore/devconsole/ par jao
-   - Google account se login karo
-   - One-time payment: $5 USD (lifetime)
-   - Payment complete karo
-
-2. **New Item Create Karo:**
-   - "New Item" button click karo
-   - ZIP file upload karo
-   - Fill karo:
-     - **Name:** Meeting Recorder
-     - **Summary:** Record meetings with one click
      - **Description:** 
        ```
        Meeting Recorder is a powerful Chrome extension that allows you to record meetings instantly with just one click. 
@@ -101,26 +88,7 @@ Ya manually:
      - **Language:** English (or Hindi)
      - **Privacy Policy URL:** (apni website ka privacy policy URL)
 
-3. **Store Listing:**
-   - Screenshots upload karo
-   - Promotional images (optional)
-   - Detailed description
-   - Support website (agar hai)
 
-4. **Pricing & Distribution:**
-   - Free select karo
-   - Countries select karo (sab countries)
-   - Visibility: Public
-
-5. **Privacy Practices:**
-   - Data collection details fill karo
-   - Single purpose use case: "Recording meetings"
-
-### Step 4: Submit for Review
-
-1. "Submit for Review" button click karo
-2. Review process: 1-3 business days
-3. Approval ke baad extension live ho jayega!
 
 ## 🔧 Permissions Explained
 
@@ -162,12 +130,6 @@ Ya manually:
 - Check Chrome downloads folder
 - Browser settings mein download location check karo
 
-## 📞 Support
-
-Agar koi issue ho to:
-1. Extension reload karo
-2. Browser restart karo
-3. Permissions check karo
 
 ---
 
