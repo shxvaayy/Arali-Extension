@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+uploads/
+*.mp3
+*.wav
+*.m4a
+*.ogg
+*.webm
+*.flac
+

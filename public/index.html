@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arali.ai - Speaker-wise Transcription</title>
+    <link rel="icon" type="image/png" href="/icon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --bg: #f9fafb;
+            --card: #ffffff;
+            --border: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--card);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: white;
+            padding: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .brand-name {
+            font-size: 2.5em;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+            font-weight: 600;
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 1.1em;
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 50px;
+        }
+
+        .upload-area {
+            border: 3px dashed var(--primary);
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .upload-area:hover::before {
+            left: 100%;
+        }
+
+        .upload-area:hover {
+            border-color: var(--secondary);
+            background: linear-gradient(135deg, #f0f2ff 0%, #e8ebff 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--secondary);
+            background: linear-gradient(135deg, #e8ebff 0%, #e0e2ff 100%);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .upload-text {
+            font-size: 1.3em;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .upload-hint {
+            font-size: 0.95em;
+            color: var(--text-light);
+            margin-top: 10px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .form-group {
+            margin: 30px 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.95em;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1em;
+            transition: all 0.3s;
+            background: var(--bg);
+        }
+
+        .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            background: white;
+        }
+
+        .form-group small {
+            display: block;
+            color: var(--text-light);
+            font-size: 0.85em;
+            margin-top: 8px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: var(--bg);
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .checkbox-group:hover {
+            background: #f3f4f6;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            font-size: 1.1em;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            font-weight: 600;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text);
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 30px;
+            background: var(--bg);
+            border-radius: 20px;
+            border: 2px solid var(--border);
+        }
+
+        .result.active {
+            display: block;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .result-header h2 {
+            color: var(--primary);
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        .copy-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .transcript {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            white-space: pre-wrap;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+            line-height: 1.8;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 2px solid var(--border);
+            font-size: 0.95em;
+            color: var(--text);
+        }
+
+        .transcript::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .transcript::-webkit-scrollbar-track {
+            background: var(--bg);
+            border-radius: 4px;
+        }
+
+        .transcript::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .transcript::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        .stats {
+            margin-top: 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            border: 2px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .stat-card h3 {
+            color: var(--primary);
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card p {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+
+        .stat-card .stat-detail {
+            font-size: 0.85em;
+            color: var(--text-light);
+            font-weight: 400;
+        }
+
+        .error {
+            display: none;
+            padding: 20px;
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 12px;
+            color: var(--error);
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .error.active {
+            display: block;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-radius: 12px;
+            font-size: 0.95em;
+            color: #065f46;
+            border: 2px solid #a7f3d0;
+            display: none;
+        }
+
+        .file-info.active {
+            display: block;
+        }
+
+        .file-info-icon {
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 30px 20px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .brand-name {
+                font-size: 2em;
+            }
+
+            .upload-area {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                <div class="logo">
+                    <img src="/icon.png" alt="Arali.ai Logo">
+                </div>
+                <div class="brand-name">Arali.ai</div>
+            </div>
+            <h1>Speaker-wise Transcription</h1>
+            <p>Upload audio and get turn-by-turn transcript with speaker names</p>
+        </div>
+
+        <div class="content">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">🎤</div>
+                <div class="upload-text">Click to upload or drag & drop audio file</div>
+                <div class="upload-hint">
+                    Supports: MP3, WAV, M4A, OGG, WEBM, FLAC (Max 100MB)
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept="audio/*">
+            </div>
+
+            <div id="fileInfo" class="file-info"></div>
+
+            <div class="form-group">
+                <label>Speaker Names (comma-separated)</label>
+                <input type="text" id="speakerNames" placeholder="e.g., Akshat, Shivay, Rohan">
+                <small>
+                    Enter names in order: First speaker, Second speaker, etc. (Required for proper identification)
+                </small>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="autoDetect">
+                    <label for="autoDetect">Try to auto-detect names from transcript context</label>
+                </div>
+            </div>
+
+            <div id="speakerMappingSection" style="display: none; margin-top: 30px; padding: 20px; background: #f8f9ff; border-radius: 12px; border: 2px solid #e0e2ff;">
+                <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.1em;">Map Speakers to Names</h3>
+                <div id="speakerMappingList"></div>
+            </div>
+
+            <button class="btn" id="transcribeBtn" onclick="transcribe()">
+                🎯 Transcribe Audio
+            </button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p class="loading-text">Transcribing audio... This may take a few minutes.</p>
+            </div>
+
+            <div class="error" id="error"></div>
+
+            <div class="result" id="result">
+                <div class="result-header">
+                    <h2>📝 Transcript</h2>
+                    <button class="copy-btn" onclick="copyTranscript()">📋 Copy</button>
+                </div>
+                <div class="transcript" id="transcript"></div>
+                <div class="stats" id="stats"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001';
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                showFileInfo(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                showFileInfo(e.target.files[0]);
+            }
+        });
+
+        function showFileInfo(file) {
+            fileInfo.classList.add('active');
+            fileInfo.innerHTML = `<span class="file-info-icon">📄</span><strong>Selected:</strong> ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        }
+
+        async function transcribe() {
+            const fileInput = document.getElementById('fileInput');
+            const speakerNames = document.getElementById('speakerNames').value;
+            const autoDetect = document.getElementById('autoDetect').checked;
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showError('Please select an audio file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio', fileInput.files[0]);
+            if (speakerNames) formData.append('speakerNames', speakerNames);
+            formData.append('autoDetect', autoDetect);
+
+            // Show loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('result').classList.remove('active');
+            document.getElementById('error').classList.remove('active');
+            document.getElementById('transcribeBtn').disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/api/transcribe`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Transcription failed');
+                }
+
+                // Show speaker mapping interface if names not provided
+                if (!speakerNames && data.transcript.segments.length > 0) {
+                    showSpeakerMapping(data.transcript.segments);
+                }
+
+                // Apply speaker names if provided
+                let finalTranscript = data.transcript.formatted;
+                let updatedSegments = data.transcript.segments;
+                
+                if (speakerNames) {
+                    const names = speakerNames.split(',').map(n => n.trim()).filter(Boolean);
+                    const uniqueSpeakers = [...new Set(data.transcript.segments.map(s => s.speaker))].sort();
+                    
+                    uniqueSpeakers.forEach((speakerLabel, index) => {
+                        if (index < names.length) {
+                            updatedSegments = updatedSegments.map(seg => 
+                                seg.speaker === speakerLabel 
+                                    ? { ...seg, speakerName: names[index] }
+                                    : seg
+                            );
+                        }
+                    });
+                    
+                    finalTranscript = updatedSegments
+                        .map(seg => `${seg.speakerName || seg.speaker}: ${seg.text}`)
+                        .join('\n\n');
+                } else {
+                    // Use segments as they are (with speakerName if available)
+                    finalTranscript = updatedSegments
+                        .map(seg => `${seg.speakerName || seg.speaker}: ${seg.text}`)
+                        .join('\n\n');
+                }
+
+                // Store segments for mapping
+                window.lastTranscriptionSegments = data.transcript.segments;
+                
+                // Show results
+                document.getElementById('transcript').textContent = finalTranscript;
+                
+                // Show stats with mapped names
+                const statsDiv = document.getElementById('stats');
+                statsDiv.innerHTML = '';
+                const statsToShow = speakerNames ? 
+                    Object.fromEntries(
+                        Object.entries(data.transcript.stats).map(([key, value]) => {
+                            const names = speakerNames.split(',').map(n => n.trim());
+                            const uniqueSpeakers = [...new Set(data.transcript.segments.map(s => s.speaker))].sort();
+                            const index = uniqueSpeakers.indexOf(key);
+                            const newKey = index >= 0 && index < names.length ? names[index] : key;
+                            return [newKey, value];
+                        })
+                    ) : data.transcript.stats;
+
+                for (const [speaker, stats] of Object.entries(statsToShow)) {
+                    const statCard = document.createElement('div');
+                    statCard.className = 'stat-card';
+                    statCard.innerHTML = `
+                        <h3>${speaker}</h3>
+                        <p>${stats.segments}</p>
+                        <div class="stat-detail">${stats.totalWords} words • ${Math.round(stats.totalTime / 1000)}s</div>
+                    `;
+                    statsDiv.appendChild(statCard);
+                }
+
+                document.getElementById('result').classList.add('active');
+                document.getElementById('loading').classList.remove('active');
+
+            } catch (error) {
+                showError(error.message);
+                document.getElementById('loading').classList.remove('active');
+            } finally {
+                document.getElementById('transcribeBtn').disabled = false;
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = `❌ Error: ${message}`;
+            errorDiv.classList.add('active');
+        }
+
+        function copyTranscript() {
+            const transcript = document.getElementById('transcript').textContent;
+            navigator.clipboard.writeText(transcript).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#10b981';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            });
+        }
+
+        function showSpeakerMapping(segments) {
+            const uniqueSpeakers = [...new Set(segments.map(s => s.speaker))].sort();
+            const mappingSection = document.getElementById('speakerMappingSection');
+            const mappingList = document.getElementById('speakerMappingList');
+            
+            mappingList.innerHTML = '';
+            
+            uniqueSpeakers.forEach((speakerLabel, index) => {
+                const mappingItem = document.createElement('div');
+                mappingItem.style.cssText = 'display: flex; align-items: center; gap: 15px; margin-bottom: 15px; padding: 15px; background: white; border-radius: 10px;';
+                mappingItem.innerHTML = `
+                    <div style="flex: 1;">
+                        <strong style="color: var(--primary);">${speakerLabel}</strong>
+                        <div style="font-size: 0.85em; color: var(--text-light); margin-top: 5px;">
+                            ${segments.filter(s => s.speaker === speakerLabel).length} segments
+                        </div>
+                    </div>
+                    <input type="text" 
+                           id="map_${speakerLabel}" 
+                           placeholder="Enter name (e.g., Akshat)"
+                           style="flex: 1; padding: 10px; border: 2px solid var(--border); border-radius: 8px;"
+                           onchange="updateTranscriptWithMapping()">
+                `;
+                mappingList.appendChild(mappingItem);
+            });
+            
+            mappingSection.style.display = 'block';
+        }
+
+        function updateTranscriptWithMapping() {
+            const segments = window.lastTranscriptionSegments;
+            if (!segments) return;
+            
+            const uniqueSpeakers = [...new Set(segments.map(s => s.speaker))].sort();
+            const updatedSegments = segments.map(seg => {
+                const input = document.getElementById(`map_${seg.speaker}`);
+                if (input && input.value.trim()) {
+                    return { ...seg, speakerName: input.value.trim() };
+                }
+                return seg;
+            });
+            
+            const finalTranscript = updatedSegments
+                .map(seg => `${seg.speakerName || seg.speaker}: ${seg.text}`)
+                .join('\n\n');
+            
+            document.getElementById('transcript').textContent = finalTranscript;
+        }
+    </script>
+</body>
+</html>

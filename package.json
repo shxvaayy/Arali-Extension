@@ -1,0 +1,40 @@
+{
+  "name": "speaker-transcription",
+  "version": "1.0.0",
+  "description": "Speaker-wise audio transcription with automatic speaker identification",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "tsx watch server/index.ts",
+    "build": "tsc",
+    "start": "node dist/server/index.js",
+    "test": "tsx test/test.ts"
+  },
+  "keywords": [
+    "transcription",
+    "speaker-diarization",
+    "audio",
+    "assemblyai",
+    "deepgram"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^2.0.1",
+    "form-data": "^4.0.0",
+    "node-fetch": "^3.3.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.13",
+    "@types/node": "^20.16.11",
+    "@types/node-fetch": "^2.6.12",
+    "@types/cors": "^2.8.19",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}
+
