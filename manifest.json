@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "Meeting Recorder",
+  "version": "1.0.0",
+  "description": "Record meetings with one click. Click on any person to start recording instantly.",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "storage",
+    "desktopCapture",
+    "tabCapture",
+    "downloads"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "exclude_matches": ["https://meet.google.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["content-google-meet.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon.png",
+      "48": "icons/icon.png",
+      "128": "icons/icon.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["recording-overlay.html", "icons/icon.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
+

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting Recorder</title>
+  
+  <!-- React and ReactDOM from CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 380px;
+      min-height: 500px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Google Sans', Arial, sans-serif;
+      background: #202124;
+      color: #e8eaed;
+    }
+    
+    .container {
+      background: #202124;
+      padding: 0;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 24px 20px;
+      text-align: center;
+      border-radius: 0;
+    }
+    
+    .header h1 {
+      font-size: 22px;
+      color: white;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    
+    .header p {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .content {
+      padding: 20px;
+    }
+    
+    .status-bar {
+      background: #303134;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #34a853;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-dot.recording {
+      background: #ea4335;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .status-text {
+      flex: 1;
+      font-size: 14px;
+      color: #e8eaed;
+      font-weight: 500;
+    }
+    
+    .duration {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e8eaed;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .btn {
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+    
+    .btn-danger:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #34a853;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #2d8c47;
+    }
+    
+    .info-section {
+      background: #303134;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    
+    .info-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .info-label {
+      font-size: 13px;
+      color: #9aa0a6;
+    }
+    
+    .info-value {
+      font-size: 14px;
+      color: #e8eaed;
+      font-weight: 500;
+    }
+    
+    .last-recording {
+      background: rgba(52, 168, 83, 0.1);
+      border: 1px solid rgba(52, 168, 83, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .last-recording h3 {
+      font-size: 14px;
+      color: #34a853;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    
+    .footer {
+      text-align: center;
+      padding-top: 16px;
+      border-top: 1px solid #303134;
+    }
+    
+    .help-text {
+      font-size: 12px;
+      color: #9aa0a6;
+      line-height: 1.5;
+    }
+    
+    .icon {
+      width: 20px;
+      height: 20px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    
+    function App() {
+      const [isRecording, setIsRecording] = useState(false);
+      const [duration, setDuration] = useState(0);
+      const [hasLastRecording, setHasLastRecording] = useState(false);
+      
+      // Check initial state
+      useEffect(() => {
+        checkRecordingState();
+        checkLastRecording();
+      }, []);
+      
+      // Duration timer
+      useEffect(() => {
+        let interval = null;
+        if (isRecording) {
+          interval = setInterval(() => {
+            setDuration(prev => prev + 1);
+          }, 1000);
+        } else {
+          setDuration(0);
+        }
+        return () => clearInterval(interval);
+      }, [isRecording]);
+      
+      function checkRecordingState() {
+        chrome.runtime.sendMessage({ action: 'getRecordingState' }, (response) => {
+          if (response && response.isRecording) {
+            setIsRecording(true);
+          }
+        });
+      }
+      
+      function checkLastRecording() {
+        chrome.storage.local.get(['lastRecording'], (result) => {
+          if (result.lastRecording) {
+            setHasLastRecording(true);
+          }
+        });
+      }
+      
+      function startRecording() {
+        chrome.runtime.sendMessage({ action: 'startRecording' }, (response) => {
+          if (response && response.success) {
+            setIsRecording(true);
+            setDuration(0);
+          } else {
+            alert(response?.error || 'Failed to start recording');
+          }
+        });
+      }
+      
+      function stopRecording() {
+        chrome.runtime.sendMessage({ action: 'stopRecording' }, (response) => {
+          if (response && response.success) {
+            setIsRecording(false);
+            setHasLastRecording(true);
+          } else {
+            alert(response?.error || 'Failed to stop recording');
+          }
+        });
+      }
+      
+      function downloadRecording() {
+        chrome.storage.local.get(['lastRecording'], (result) => {
+          if (result.lastRecording && result.lastRecording.url) {
+            chrome.runtime.sendMessage({
+              action: 'downloadRecording',
+              blobUrl: result.lastRecording.url
+            });
+          }
+        });
+      }
+      
+      function formatDuration(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+      
+      // Listen for messages
+      useEffect(() => {
+        const listener = (request) => {
+          if (request.action === 'recordingStarted') {
+            setIsRecording(true);
+            setDuration(0);
+          } else if (request.action === 'recordingStopped') {
+            setIsRecording(false);
+            setHasLastRecording(true);
+          }
+        };
+        
+        chrome.runtime.onMessage.addListener(listener);
+        return () => chrome.runtime.onMessage.removeListener(listener);
+      }, []);
+      
+      return (
+        <div className="container">
+          <div className="header">
+            <h1>🎥 Meeting Recorder</h1>
+            <p>Record meetings with one click</p>
+          </div>
+          
+          <div className="content">
+            <div className="status-bar">
+              <div className={`status-dot ${isRecording ? 'recording' : ''}`}></div>
+              <div className="status-text">
+                {isRecording ? 'Recording...' : 'Ready'}
+              </div>
+              <div className="duration">{formatDuration(duration)}</div>
+            </div>
+            
+            <div className="controls">
+              <button
+                className="btn btn-primary"
+                onClick={startRecording}
+                disabled={isRecording}
+              >
+                <span>▶️</span>
+                Start Recording
+              </button>
+              
+              <button
+                className="btn btn-danger"
+                onClick={stopRecording}
+                disabled={!isRecording}
+              >
+                <span>⏹️</span>
+                Stop Recording
+              </button>
+            </div>
+            
+            <div className="info-section">
+              <div className="info-item">
+                <span className="info-label">Status:</span>
+                <span className="info-value">
+                  {isRecording ? 'Recording' : 'Not Recording'}
+                </span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Duration:</span>
+                <span className="info-value">{formatDuration(duration)}</span>
+              </div>
+            </div>
+            
+            {hasLastRecording && (
+              <div className="last-recording">
+                <h3>Last Recording</h3>
+                <button
+                  className="btn btn-secondary"
+                  onClick={downloadRecording}
+                  style={{ width: '100%' }}
+                >
+                  <span>⬇️</span>
+                  Download Recording
+                </button>
+              </div>
+            )}
+            
+            <div className="footer">
+              <p className="help-text">
+                💡 Click the extension icon in Google Meet to record instantly
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
+
+
+
+
