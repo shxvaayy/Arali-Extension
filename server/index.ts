@@ -9,8 +9,15 @@ import multer from 'multer';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { transcribeAudio, identifySpeakers, formatTranscript, getSpeakerStats, detectNamesFromTranscript } from './transcription.js';
+import { transcribeAudioOpenSource, identifySpeakers as identifySpeakersOS, formatTranscript as formatTranscriptOS, getSpeakerStats as getSpeakerStatsOS, detectNamesFromTranscript as detectNamesFromTranscriptOS } from './open-source-transcription.js';
 
 dotenv.config();
+
+// Load HuggingFace token from .env
+if (process.env.HUGGINGFACE_TOKEN) {
+  process.env.HUGGINGFACE_TOKEN = process.env.HUGGINGFACE_TOKEN;
+  process.env.HF_TOKEN = process.env.HUGGINGFACE_TOKEN; // Also set as HF_TOKEN for compatibility
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -66,6 +73,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     const speakerNamesParam = req.body.speakerNames;
     const firstSpeakerName = req.body.firstSpeakerName;
     const autoDetect = req.body.autoDetect === 'true' || req.body.autoDetect === true;
+    const useOpenSource = req.body.useOpenSource === 'true' || req.body.useOpenSource === true || process.env.USE_OPEN_SOURCE === 'true';
 
     // Parse speaker names
     let speakerNames: string[] | undefined;
@@ -77,12 +85,28 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 
     // Transcribe audio
     console.log('🔄 Starting transcription...');
-    const transcriptionResult = await transcribeAudio(req.file.buffer, req.file.originalname);
+    let transcriptionResult;
+    
+    if (useOpenSource) {
+      console.log('📦 Using open source models (PyAnnote + Whisper)...');
+      transcriptionResult = await transcribeAudioOpenSource(req.file.buffer, req.file.originalname);
+    } else {
+      console.log('☁️  Using API (AssemblyAI/Deepgram)...');
+      transcriptionResult = await transcribeAudio(req.file.buffer, req.file.originalname);
+    }
 
     console.log(`✅ Transcription completed: ${transcriptionResult.segments.length} segments`);
 
-    // Auto-detect names if requested
-    if (autoDetect && !speakerNames) {
+    // Auto-detect names from transcript (always try for open-source, optional for API)
+    let detectedNameMap: { [speakerLabel: string]: string } = {};
+    if (useOpenSource) {
+      // For open-source, always try auto-detection
+      detectedNameMap = detectNamesFromTranscriptOS(transcriptionResult.segments);
+      if (Object.keys(detectedNameMap).length > 0) {
+        console.log('🔍 Auto-detected speaker names:', detectedNameMap);
+      }
+    } else if (autoDetect && !speakerNames) {
+      // For API, only if autoDetect flag is set
       const detectedNames = detectNamesFromTranscript(transcriptionResult.segments);
       if (detectedNames.length > 0) {
         speakerNames = detectedNames;
@@ -90,9 +114,13 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       }
     }
 
-    // Identify speakers - map sequentially
+    // Identify speakers - use auto-detected names if available
     let identifiedSegments = transcriptionResult.segments;
-    if (speakerNames && speakerNames.length > 0) {
+    
+    if (useOpenSource && Object.keys(detectedNameMap).length > 0) {
+      // Use auto-detected names for open-source
+      identifiedSegments = identifySpeakersOS(transcriptionResult.segments, detectedNameMap);
+    } else if (speakerNames && speakerNames.length > 0) {
       // Map speakers sequentially: first speaker name -> first detected speaker, etc.
       const uniqueSpeakers = [...new Set(transcriptionResult.segments.map(s => s.speaker))].sort();
       const speakerMap: { [key: string]: string } = {};
@@ -115,13 +143,21 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
         speakerName: segment.speaker === firstSpeaker ? firstSpeakerName : segment.speaker
       }));
     } else {
-      // Keep original speaker labels if no names provided
-      identifiedSegments = transcriptionResult.segments;
+      // Auto-detect if no names provided (for open-source)
+      if (useOpenSource) {
+        identifiedSegments = identifySpeakersOS(transcriptionResult.segments);
+      } else {
+        identifiedSegments = transcriptionResult.segments;
+      }
     }
 
-    // Format transcript
-    const formattedTranscript = formatTranscript(identifiedSegments);
-    const speakerStats = getSpeakerStats(identifiedSegments);
+    // Format transcript (use appropriate function based on source)
+    const formattedTranscript = useOpenSource 
+      ? formatTranscriptOS(identifiedSegments)
+      : formatTranscript(identifiedSegments);
+    const speakerStats = useOpenSource
+      ? getSpeakerStatsOS(identifiedSegments)
+      : getSpeakerStats(identifiedSegments);
 
     res.json({
       success: true,
